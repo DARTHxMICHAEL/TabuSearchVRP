@@ -3,6 +3,8 @@
 This is a simple implementation of **Vehicle Routing Problem (VRP)** using a **Tabu Search**.  
 The main objective is to optimize the assignment of cities to a fleet of vehicles in order to minimize the **total travel distance**.
 
+Source: [DARTHxMICHAEL/TabuSearchVRP](https://github.com/DARTHxMICHAEL/TabuSearchVRP)
+
 ## Instalation and use
 
 Dependencies:
