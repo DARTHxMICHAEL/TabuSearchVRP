@@ -132,12 +132,13 @@ def visualize_solution(vrp, solution):
 	plt.figure(figsize=(10, 8))
 
 	total_distance = 0
+	labeled = set()  # labeled cities
 
 	for i, route in enumerate(solution):
 		if not route:
 			continue
 
-		# Build full path: depot -> route -> depot
+		# depot -> route -> depot
 		path = [depot] + route + [depot]
 
 		x = [c[3] for c in path]
@@ -151,11 +152,30 @@ def visualize_solution(vrp, solution):
 			label=f'Car {i+1} (dist={route_distance:.2f})'
 		)
 
-	# Plot depot separately
-	plt.scatter(depot[3], depot[2], s=150, marker='*')
-	plt.text(depot[3], depot[2], depot[0], fontsize=10, ha='right')
+		# cities label
+		for c in route:
+			if c[0] not in labeled:
+				plt.text(
+					c[3], c[2], c[0],
+					fontsize=8,
+					ha='left',
+					va='bottom'
+				)
+				labeled.add(c[0])
 
-	plt.title(f'VRP Solution – Total distance = {total_distance:.2f} (~{total_distance*111:.1f}km)')
+	plt.scatter(depot[3], depot[2], s=180, marker='*', color='black')
+	plt.text(
+		depot[3], depot[2], depot[0],
+		fontsize=10,
+		fontweight='bold',
+		ha='right',
+		va='bottom'
+	)
+
+	plt.title(
+		f'VRP Solution – Total distance = {total_distance:.2f} '
+		f'(~{total_distance * 111:.1f} km)'
+	)
 	plt.xlabel('Longitude (X)')
 	plt.ylabel('Latitude (Y)')
 	plt.legend()
