@@ -1,7 +1,7 @@
-# Vehicle Routing Problem (VRP) – Tabu Search (Python)
+# Vehicle Routing Problem – Tabu Search (Python) - ENGLISH
 
-This is a simple implementation of **Vehicle Routing Problem (VRP)** using a **Tabu Search**.  
-The main objective is to optimize the assignment of cities to a fleet of vehicles in order to minimize the **total travel distance**.
+This is a simple **Vehicle Routing Problem (VRP)** implementation using a **Tabu Search**.  
+The main objective is to to minimalize the **total travel distance**.
 
 Source: [DARTHxMICHAEL/TabuSearchVRP](https://github.com/DARTHxMICHAEL/TabuSearchVRP)
 
@@ -14,45 +14,126 @@ pip install matplotlib
 
 Example usage:
 ```
-vrp = VRP(cities, n_cars=5, capacity=1000)
+vrp = VRP(cities, n_cars=5, capacity=1000, tabu_tenure=10, iterations=100, seed=123)
+
 sol, cost = vrp.tabu_search()
+print("Best total cost:", cost)
 
-print("Best solution:")
-for i, route in enumerate(sol):
-    print(f"Car {i+1}: {route}")
-
-print("Total distance:", cost)
+visualize_solution(vrp, sol)
 ```
 
 ## Code explanation
 
-- Cities are provided as (name, distance_from_root) tuples.
+- We use seed param in order to make the algorithm fully deterministic. 
 
-- The first city is assumed to be the root depot.
+- Cities are provided as (city_name, demand, Y coordinate, X coordinate) list.
 
-- Route cost is simplified as a round-trip distance ```cost = distance * 2```
+- The first city with 0 demand is assumed to be depot (Kraków in this case).
 
-- A random initial assignment distributes cities across the vehicles.
+- Route cost (distance) is calculated using euclidean distance formula.
 
-- Tabu Search improves the solution by swapping clients between vehicles.
+- Each iteration tries to improve the initial/previous solution by memorizing the previous best results and paths.
 
-- Results include: ``` Printed route solution, Total distance A bar chart showing distance per car ```
+- Graphical visualization includes path visualization and combined distance per all cars.
 
-## How Tabu Search works
+## How Tabu Search in VRP works
 
-Tabu Search is a metaheuristic optimization method that explores different solutions while avoiding cycling back to already-tested configurations.
-In the context of this VRP:
+Tabu Search is a metaheuristic optimization method that explores different solutions while avoiding cycling back to recently visited configurations.
 
-- The algorithm starts with a random initial assignment of clients to vehicles.
+- The algorithm starts with a deterministic initial assignment of clients to vehicles.
 
-- At each iteration, it generates a neighborhood of new solutions by swapping clients between two vehicle routes.
+- At each iteration, it generates a neighborhood of solutions by relocating a single client between two vehicle routes.
 
-- Every swap represents a move. Moves that were recently used are placed on a tabu list, preventing the algorithm from immediately undoing them.
+- Each relocation is treated as a move. Recently used moves are stored in a tabu list, making them temporarily forbidden.
 
-- The search selects the best non-tabu neighbor, even if it does not immediately improve the global solution.
+- Among all non-tabu neighbors, the algorithm selects the one with the lowest total fleet distance, even if it does not improve the current global best.
 
-- Over time, tabu restrictions expire, allowing the search to revisit older moves while still exploring new combinations.
+- Over time, tabu restrictions expire, allowing previously forbidden moves to become available again.
 
-- This mechanism helps escape local minima and leads to better overall routing configurations.
+- This mechanism enables the algorithm to escape local minima and continue exploring better route configurations.
 
-Tabu Search therefore provides a balance between exploration (trying new route combinations) and memory-based control (avoiding unproductive oscillations), making it well-suited for combinatorial optimization tasks like VRP.
+## Limitations of this algorithm
+
+- Our algorithm does not take the consideration of other factors such as travel time, fuel cost and more real life scenario aspects. 
+
+- Distances between cities are calculated based on their coordinates, which is certainlly not exact measure of distance between them.
+
+- The final distance is a summary since earth is an ellipsoid (distance in kilometers for one degree of longitude/latitude varies).
+
+Prepared by Michał Kulikowski and Ania Walaszek.
+
+
+
+<br/>
+
+# Vehicle Routing Problem – Tabu Search (Python) - POLISH
+
+Jest to prosta implementacja **Vehicle Routing Problem (Problemu Marszrutyzacji)** z wykorzystaniem przeszukiwania Tabu.
+Głównym celem algorytmu jest minimalizacja sumy odległości pokonanej przez wszystkie samochody. Wprowadzenie danych jako parametry i 
+zmiennej ziarna (uzależniającej wszelkie zmianne losowe) umożliwia odtworzenie tego algorytmu w różnych scenariuszach 
+oraz porównywanie uzyskanych rezultatów.
+
+
+Źródło: [DARTHxMICHAEL/TabuSearchVRP](https://github.com/DARTHxMICHAEL/TabuSearchVRP)
+
+## Instalacja i użycie
+
+Zależności:
+```bash
+pip install matplotlib
+```
+
+Przykładowe użycie:
+```
+vrp = VRP(cities, n_cars=5, capacity=1000, tabu_tenure=10, iterations=100, seed=123)
+
+sol, cost = vrp.tabu_search()
+print("Best total cost:", cost)
+
+visualize_solution(vrp, sol)
+```
+
+## Charakterystyka kodu
+
+- Używamy parametru ziarna (seed) w celu stworzenia powtarzalnego środowiska testowego.
+
+- Lista miast dostarczona jest jako (city_name, demand, Y coordinate, X coordinate).
+
+- Pierwsze miasto z zerowym zapotrzebowaniem traktowane jest jako magazyn (tutaj Kraków).
+
+- Odległości między miastami liczone są jako najkrótsza odległość między punktami (metryka euklidesowa).
+
+- Each iteration tries to improve the initial/previous solution by memorizing the previous best results and paths.
+
+- Celem kolejnych iteracji jest poprawa wyniku wcześniejszych iteracji/kombinacji początkowej, co umożliwia zapamiętywanie parametrów takich 
+jak dotychczasowy najlepszy wynik czy informacje o dotychczas użytych trasach.
+
+- Graficzna wizualizacja przedstawiająca scieżki przebyte przez samochody i sumaryczny wynik.
+
+## Jak działa algorytm poszukiwania tabu w VRP
+
+- Poszukiwanie Tabu to metaheurystyczny algorytm przeszukujący przestrzeń potencjalnych rozwiązań zapamiętujący dotychczasowe konfiguracje.
+
+- Poszukiwania zaczynamy od losowej konfiguracji powiązania klientów z samochodami.
+
+- Każda kolejna iteracja generuje listę sąsiedztwa dotychczasowych rozwiązań poprzez zamianę klienta/ów miedzy samochodami.
+
+- Każda relokacja jest traktowana jako jeden ruch. Lista ostatnich ruchów jest przechowywana w liście tabu, która tymczasowo uniemożwlia ich użycie.
+
+- Spośród wszystkich dostępnych ruchów algorytm wybiera te z najniższą sumą dystansu floty, bez wględu na to czy poprawia to wynik globalny czy nie.
+
+- Z czasem lista zabronionych ruchów ulega edycji co pozwala na testowanie nowych konfiguracji.
+
+- Dzięki temu prostemu mechanizmowi unikamy ryzyk związanych w utknięciem w minimum lokalnym.
+
+
+## Ograniczenia naszego algorytmu
+
+- Our algorithm does not take the consideration of other factors such as travel time, fuel cost and more real life scenario aspects. 
+- Nasz algorytm nie uwzględnia czynników takich jak czas podróży, koszty paliwa czy inne aspekty prawdziwej prodróży.
+
+- Dystans między miastami jest liczony jako linia prosta na podstawie ich współrzędnych, co nie musi być jednoznaczne z długością trasy między nimi.
+
+- Ostateczny dystans jest przybliżeniem ponieważ ziemia jest elipsoidą (przelicznik dla 1 stopnia długości/szerokości ulega zmianie w zależności od lokalizacji)
+
+Przygotowanie Michał Kulikowski i Ania Walaszek.

@@ -1,27 +1,19 @@
 import random
 import math
-from typing import List, Tuple
 import matplotlib.pyplot as plt
 
 class VRP:
-	"""
-	Simple Vehicle Routing Problem (VRP) solver using Tabu Search.
-	"""
-
-	def __init__(self, cities: List[Tuple[str, float]], n_cars=5, capacity=1000, tabu_tenure=10, iterations=200, seed=42):
+	def __init__(self, cities, n_cars=5, capacity=1000, tabu_tenure=10, iterations=200, seed=42):
 		"""
 		Initialize the VRP model.
 
-
-		Args:
-		cities (List[Tuple[str, float]]): List of (city_name, distance) pairs. First city is the root.
-		n_cars (int): Number of available vehicles.
-		capacity (int): Capacity per vehicle (simplified as client count capacity).
-		tabu_tenure (int): Number of iterations a move stays tabu.
-		iterations (int): Number of tabu search iterations.
-		seed (int): Random seed for deterministic behavior.
+		cities: list of tuples (name, demand, y, x)
+		n_cars: number of available vehicles
+		capacity: maximum total demand per vehicle
+		tabu_tenure: number of iterations a move remains tabu
+		iterations: total number of tabu search iterations
+		seed: random seed for deterministic behavior
 		"""
-
 		self.cities = cities
 		self.n_cars = n_cars
 		self.capacity = capacity
@@ -31,155 +23,214 @@ class VRP:
 
 		random.seed(self.seed)
 
-		self.root = cities[0]
-		self.client_distances = [dist for _, dist in cities[1:]]
+		# the first city with 0 demand is threated as a depo
+		self.depot = next(c for c in cities if c[1] == 0)
+		# all other with positive demand is threated as a client
+		self.clients = [c for c in cities if c[1] > 0]
 
-		# trivial demand: each client demands "distance" units or 1 unit? (use 1)
-		self.demands = [1 for _ in cities[1:]]
-
-	def total_distance(self, solution):
+	def distance(self, a, b):
 		"""
-		Compute the total cost of all routes.
-
-		Args:
-		solution: A list of routes where each route is a list of distances.
-
-		Returns:
-		float: Total distance of the solution.
+		Distance between two cities (euclidean).
 		"""
+		return math.hypot(a[2] - b[2], a[3] - b[3])
 
-		return sum(sum(route) for route in solution)
-
-	def create_initial_solution(self):
+	def route_cost(self, route):
 		"""
-		Build a random feasible initial solution by assigning clients to cars.
-
-		Returns:
-		List[List[float]]: Initial set of routes.
+		Calculate the total distance of a single vehicle route,
+		(start and end at depot).
 		"""
+		cost = 0
+		prev = self.depot
+		for c in route:
+			cost += self.distance(prev, c)
+			prev = c
+		cost += self.distance(prev, self.depot)
+		return cost
 
-		# randomly assign each client to a car if capacity allows
+	def total_cost(self, solution):
+		"""
+		Calculate the total distance traveled by all vehicles.
+		"""
+		return sum(self.route_cost(r) for r in solution)
+
+	def route_demand(self, route):
+		"""
+		Calculate the total demand served by a single route.
+		"""
+		return sum(c[1] for c in route)
+
+	def initial_solution(self):
+		"""
+		Construct a simple initial solution.
+		"""
 		routes = [[] for _ in range(self.n_cars)]
-		capacities = [self.capacity] * self.n_cars
+		loads = [0] * self.n_cars
 
-		for dist in self.client_distances:
-			assigned = False
-			while not assigned:
-				car = random.randint(0, self.n_cars - 1)
-				if capacities[car] >= 1:
-					routes[car].append(dist * 2)  # go-and-return cost
-					capacities[car] -= 1
-					assigned = True
+		for client in self.clients:
+			for i in range(self.n_cars):
+				if loads[i] + client[1] <= self.capacity:
+					routes[i].append(client)
+					loads[i] += client[1]
+					break
+
 		return routes
 
 	def tabu_search(self):
 		"""
-		Run the tabu search optimization process.
-
-		Returns:
-		Tuple[solution, cost]: Best found solution and its total cost.
+		Run the Tabu Search algorithm to minimize
+		the sum of distances traveled by all vehicles.
 		"""
+		current = self.initial_solution()
+		best = current
+		best_cost = self.total_cost(best)
 
-		current_solution = self.create_initial_solution()
-		best_solution = current_solution
-		best_cost = self.total_distance(best_solution)
-
-		tabu_list = {}
+		tabu = {}
 
 		for it in range(self.iterations):
-			neighborhood = []
+			neighbors = []
 
-			# generate neighbors by swapping clients between cars
 			for i in range(self.n_cars):
 				for j in range(self.n_cars):
-					if i != j and current_solution[i] and current_solution[j] is not None:
-						for a in range(len(current_solution[i])):
-							for b in range(len(current_solution[j])):
-								new_solution = [route[:] for route in current_solution]
-								new_solution[i][a], new_solution[j][b] = new_solution[j][b], new_solution[i][a]
+					if i == j:
+						continue
+					for c in current[i]:
+						if self.route_demand(current[j]) + c[1] <= self.capacity:
+							new = [r[:] for r in current]
+							new[i].remove(c)
+							new[j].append(c)
+							move = (c[0], i, j)
+							if move not in tabu:
+								neighbors.append((new, move))
 
-								move = (i, j, a, b)
-								if move not in tabu_list:
-									neighborhood.append((new_solution, move))
-
-			if not neighborhood:
+			if not neighbors:
 				break
 
-			best_neighbor = None
-			best_neighbor_cost = float('inf')
-			best_move = None
+			neighbors.sort(key=lambda x: self.total_cost(x[0]))
+			current, move = neighbors[0]
+			cost = self.total_cost(current)
 
-			for solution, move in neighborhood:
-				cost = self.total_distance(solution)
-				if cost < best_neighbor_cost:
-					best_neighbor = solution
-					best_neighbor_cost = cost
-					best_move = move
+			tabu[move] = self.tabu_tenure
 
-			current_solution = best_neighbor
-			tabu_list[best_move] = self.tabu_tenure
+			for m in list(tabu):
+				tabu[m] -= 1
+				if tabu[m] <= 0:
+					del tabu[m]
 
-			# decrease tabu tenure
-			for k in list(tabu_list.keys()):
-				tabu_list[k] -= 1
-				if tabu_list[k] <= 0:
-					del tabu_list[k]
+			if cost < best_cost:
+				best = current
+				best_cost = cost
 
-			if best_neighbor_cost < best_cost:
-				best_solution = best_neighbor
-				best_cost = best_neighbor_cost
+		return best, best_cost
 
-		return best_solution, best_cost
+
+def visualize_solution(vrp, solution):
+	"""
+	Create a simple path visualizations for all cars.
+	"""
+	depot = vrp.depot
+
+	plt.figure(figsize=(10, 8))
+
+	total_distance = 0
+
+	for i, route in enumerate(solution):
+		if not route:
+			continue
+
+		# Build full path: depot -> route -> depot
+		path = [depot] + route + [depot]
+
+		x = [c[3] for c in path]
+		y = [c[2] for c in path]
+
+		route_distance = vrp.route_cost(route)
+		total_distance += route_distance
+
+		plt.plot(
+			x, y, marker='o',
+			label=f'Car {i+1} (dist={route_distance:.2f})'
+		)
+
+	# Plot depot separately
+	plt.scatter(depot[3], depot[2], s=150, marker='*')
+	plt.text(depot[3], depot[2], depot[0], fontsize=10, ha='right')
+
+	plt.title(f'VRP Solution – Total distance = {total_distance:.2f} (~{total_distance*111:.1f}km)')
+	plt.xlabel('Longitude (X)')
+	plt.ylabel('Latitude (Y)')
+	plt.legend()
+	plt.grid(True)
+	plt.tight_layout()
+	plt.show()
 
 cities = [
-	("Krakow", 0),
-	("Bialystok", 500),
-	("Bielsko-Biala", 50),
-	("Chrzanow", 400),
-	("Gdansk", 200),
-	("Gdynia", 100),
-	("Gliwice", 40),
-	("Gromnik", 200),
-	("Katowice", 300),
-	("Kielce", 30),
-	("Krosno", 60),
-	("Krynica", 50),
-	("Lublin", 60),
-	("Lodz", 160),
-	("Malbork", 100),
-	("NowyTarg", 120),
-	("Olsztyn", 300),
-	("Poznan", 100),
-	("Pulawy", 200),
-	("Radom", 100),
-	("Rzeszow", 60),
-	("Sandomierz", 200),
-	("Szczecin", 150),
-	("Szczucin", 60),
-	("SzklarskaPoreba", 50),
-	("Tarnow", 70),
-	("Warszawa", 200),
-	("Wieliczka", 90),
-	("Wroclaw", 40),
-	("Zakopane", 200),
-	("Zamosc", 300)
+	#(city_name, demand, Y, X)
+	("Krakow", 0, 50.0647, 19.9450),
+	("Bialystok", 500, 53.1325, 23.1688),
+	("Bielsko-Biala", 50, 49.8224, 19.0584),
+	("Chrzanow", 400, 50.1355, 19.4021),
+	("Gdansk", 200, 54.3520, 18.6466),
+	("Gdynia", 100, 54.5189, 18.5305),
+	("Gliwice", 40, 50.2945, 18.6714),
+	("Gromnik", 200, 49.8500, 21.0833),
+	("Katowice", 300, 50.2649, 19.0238),
+	("Kielce", 30, 50.8661, 20.6286),
+	("Krosno", 60, 49.6936, 21.7707),
+	("Krynica", 50, 49.4121, 20.9597),
+	("Lublin", 60, 51.2465, 22.5684),
+	("Lodz", 160, 51.7592, 19.4550),
+	("Malbork", 100, 54.0350, 19.0267),
+	("NowyTarg", 120, 49.4775, 20.0321),
+	("Olsztyn", 300, 53.7784, 20.4801),
+	("Poznan", 100, 52.4064, 16.9252),
+	("Pulawy", 200, 51.4178, 21.9660),
+	("Radom", 100, 51.4027, 21.1471),
+	("Rzeszow", 60, 50.0413, 21.9990),
+	("Sandomierz", 200, 50.6820, 21.7486),
+	("Szczecin", 150, 53.4285, 14.5528),
+	("Szczucin", 60, 50.3500, 21.1833),
+	("Szklarska-Poreba", 50, 50.8280, 15.5266),
+	("Tarnow", 70, 50.0138, 20.9881),
+	("Warszawa", 200, 52.2297, 21.0122),
+	("Wieliczka", 90, 49.9875, 20.0642),
+	("Wroclaw", 40, 51.1079, 17.0385),
+	("Zakopane", 200, 49.2992, 19.9496),
+	("Zamosc", 300, 50.7174, 23.2523)
 ]
 
-vrp = VRP(cities, n_cars=5, capacity=1000, seed=123)
+vrp = VRP(cities, n_cars=5, capacity=1000, tabu_tenure=10, iterations=100, seed=123)
+
 sol, cost = vrp.tabu_search()
+print("Best total cost:", cost)
 
-print("Best solution:")
-for i, route in enumerate(sol):
-	print(f"Car {i+1}: {route}")
+visualize_solution(vrp, sol)
 
-print("Total distance:", cost)
+"""
+results = {}
 
-car_distances = [sum(route) for route in sol]
+for n in range(1, 11):
+	vrp = VRP(
+		cities,
+		n_cars=n,
+		capacity=1000,
+		tabu_tenure=10,
+		iterations=100,
+		seed=123
+	)
+	_, cost = vrp.tabu_search()
+	results[n] = cost
+	print(f"Best total cost for {n} car: {cost:.2f}")
 
-plt.figure(figsize=(8,4))
-plt.bar(range(1, len(car_distances)+1), car_distances)
-plt.xlabel("Car Number")
-plt.ylabel("Distance [km]")
-plt.title("Distance per car")
+# arrays for visualitzation
+cars = list(results.keys())
+costs = list(results.values())
+
+plt.figure(figsize=(8, 5))
+plt.plot(cars, costs, marker='o')
+plt.xlabel("Number of Cars")
+plt.ylabel("Total Distance [degrees]")
+plt.title("Total Distance vs Number of Cars")
+plt.grid(True)
 plt.tight_layout()
 plt.show()
+"""
