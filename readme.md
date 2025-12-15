@@ -30,13 +30,15 @@ visualize_solution(vrp, sol)
 
 - The first city with 0 demand is assumed to be depot (Kraków in this case).
 
+- Each car has fixed capacity.
+
 - Route cost (distance) is calculated using euclidean distance formula.
 
 - Each iteration tries to improve the initial/previous solution by memorizing the previous best results and paths.
 
 - Graphical visualization includes path visualization and combined distance per all cars.
 
-## How Tabu Search in VRP works
+## How Tabu Search in (C)VRP works
 
 Tabu Search is a metaheuristic optimization method that explores different solutions while avoiding cycling back to recently visited configurations.
 
@@ -101,6 +103,8 @@ visualize_solution(vrp, sol)
 
 - Pierwsze miasto z zerowym zapotrzebowaniem traktowane jest jako magazyn (tutaj Kraków).
 
+- Każdy samochód dysponuje ograniczoną pojemnością.
+
 - Odległości między miastami liczone są jako najkrótsza odległość między punktami (metryka euklidesowa).
 
 - Celem kolejnych iteracji jest poprawa wyniku wcześniejszych iteracji/kombinacji początkowej, co umożliwia zapamiętywanie parametrów takich 
@@ -108,7 +112,7 @@ jak dotychczasowy najlepszy wynik czy informacje o dotychczas użytych trasach.
 
 - Graficzna wizualizacja przedstawiająca scieżki przebyte przez samochody i sumaryczny wynik.
 
-## Jak działa algorytm poszukiwania tabu w VRP
+## Jak działa algorytm poszukiwania tabu w (C)VRP
 
 - Poszukiwanie Tabu to metaheurystyczny algorytm przeszukujący przestrzeń potencjalnych rozwiązań zapamiętujący dotychczasowe konfiguracje.
 
