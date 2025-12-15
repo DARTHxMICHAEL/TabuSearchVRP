@@ -103,8 +103,6 @@ visualize_solution(vrp, sol)
 
 - Odległości między miastami liczone są jako najkrótsza odległość między punktami (metryka euklidesowa).
 
-- Each iteration tries to improve the initial/previous solution by memorizing the previous best results and paths.
-
 - Celem kolejnych iteracji jest poprawa wyniku wcześniejszych iteracji/kombinacji początkowej, co umożliwia zapamiętywanie parametrów takich 
 jak dotychczasowy najlepszy wynik czy informacje o dotychczas użytych trasach.
 
@@ -118,18 +116,17 @@ jak dotychczasowy najlepszy wynik czy informacje o dotychczas użytych trasach.
 
 - Każda kolejna iteracja generuje listę sąsiedztwa dotychczasowych rozwiązań poprzez zamianę klienta/ów miedzy samochodami.
 
-- Każda relokacja jest traktowana jako jeden ruch. Lista ostatnich ruchów jest przechowywana w liście tabu, która tymczasowo uniemożwlia ich użycie.
+- Każda relokacja jest traktowana jako jeden ruch. Lista ostatnich ruchów jest przechowywana w liście tabu, która tymczasowo uniemożwlia ich ponowne użycie.
 
 - Spośród wszystkich dostępnych ruchów algorytm wybiera te z najniższą sumą dystansu floty, bez wględu na to czy poprawia to wynik globalny czy nie.
 
-- Z czasem lista zabronionych ruchów ulega edycji co pozwala na testowanie nowych konfiguracji.
+- Z czasem lista zabronionych ruchów ulega redukcji co pozwala na testowanie nowych konfiguracji.
 
 - Dzięki temu prostemu mechanizmowi unikamy ryzyk związanych w utknięciem w minimum lokalnym.
 
 
 ## Ograniczenia naszego algorytmu
 
-- Our algorithm does not take the consideration of other factors such as travel time, fuel cost and more real life scenario aspects. 
 - Nasz algorytm nie uwzględnia czynników takich jak czas podróży, koszty paliwa czy inne aspekty prawdziwej prodróży.
 
 - Dystans między miastami jest liczony jako linia prosta na podstawie ich współrzędnych, co nie musi być jednoznaczne z długością trasy między nimi.
